@@ -1,27 +1,10 @@
-# Build stage for Obsidian LiveSync plugin
-FROM node:22-alpine AS builder
-
-WORKDIR /app
-
-# Copy package files
-COPY package*.json ./
-
-# Install dependencies
-RUN npm install
-
-# Copy source code
-COPY . .
-
-# Build the plugin
-RUN npm run build
-
-# Runtime stage - serve plugin files via HTTP
+# Runtime stage - serve pre-built plugin files via HTTP
 FROM nginx:alpine
 
-# Copy built files from builder
-COPY --from=builder /app/main.js /usr/share/nginx/html/
-COPY --from=builder /app/manifest.json /usr/share/nginx/html/
-COPY --from=builder /app/styles.css /usr/share/nginx/html/
+# Copy built files (build locally first with: npm run build)
+COPY main.js /usr/share/nginx/html/
+COPY manifest.json /usr/share/nginx/html/
+COPY styles.css /usr/share/nginx/html/
 
 # Copy nginx config with CORS enabled for Obsidian
 COPY <<EOF /etc/nginx/conf.d/default.conf
