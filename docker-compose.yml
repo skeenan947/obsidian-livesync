@@ -1,0 +1,46 @@
+services:
+  # Obsidian LiveSync - serves plugin files
+  livesync:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: obsidian-livesync-app
+    ports:
+      - "8080:80"
+    restart: unless-stopped
+
+  # CouchDB for Obsidian LiveSync
+  couchdb:
+    image: couchdb:3.5.0
+    container_name: obsidian-livesync-couchdb
+    environment:
+      - COUCHDB_USER=${COUCHDB_USER:-admin}
+      - COUCHDB_PASSWORD=${COUCHDB_PASSWORD:-password}
+    ports:
+      - "5984:5984"
+    volumes:
+      - couchdb_data:/opt/couchdb/data
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5984/_up"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # CouchDB initialization service
+  couchdb-init:
+    image: curlimages/curl:latest
+    container_name: obsidian-livesync-init
+    depends_on:
+      couchdb:
+        condition: service_healthy
+    environment:
+      - COUCHDB_USER=${COUCHDB_USER:-admin}
+      - COUCHDB_PASSWORD=${COUCHDB_PASSWORD:-password}
+    volumes:
+      - ./scripts/init-couchdb.sh:/init-couchdb.sh:ro
+    entrypoint: ["/bin/sh", "/init-couchdb.sh"]
+    restart: "no"
+
+volumes:
+  couchdb_data:
